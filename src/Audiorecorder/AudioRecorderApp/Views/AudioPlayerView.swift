@@ -30,51 +30,12 @@ struct AudioPlayerView: View {
 
     var body: some View {
         VStack(spacing: 30) {
-            Text(audioPlayer.isPlaying ? "▶️ Wiedergabe läuft…" : "⏸️ Gestoppt")
-                .font(.title)
-            
-            Button(action: {
-                if audioPlayer.isPlaying {
-                    audioPlayer.stopPlayback()
-                } else {
-                    let file = FileManager.default
-                        .urls(for: .documentDirectory, in: .userDomainMask)[0]
-                        .appendingPathComponent("aufnahme.m4a")
-                    audioPlayer.startPlayback(url: file)
-                }
-            }) {
-                Text(audioPlayer.isPlaying ? "Stoppen" : "Abspielen")
-                    .padding()
-                    .frame(width: 200)
-                    .background(audioPlayer.isPlaying ? Color.red : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+            VStack(spacing: 20) {
+                playbackControls
+                volumeControl
+                sortButton
             }
             
-            VStack(alignment: .leading) {
-                Text("Lautstärke: \(Int(volume * 100)) %")
-                Slider(value: $volume, in: 0.0...1.0)
-                    .onChange(of: volume) {
-                        audioPlayer.setPlayerVolume(Float(volume))
-                    }
-            }
-            .padding(.horizontal)
-            
-            /*
-            VStack {
-                Button("Datei öffnen") {
-                    showingPicker = true
-                }
-            }
-            .sheet(isPresented: $showingPicker) {
-                DocumentPicker { url in
-                    audioPlayer.playSelectedFile(url: url)
-                }
-            }
-            */
-            Button("🔄 Sortieren") {
-                audioPlayer.toggleSortOrder()
-            }
             List {
                 ForEach(audioPlayer.recordings, id: \.self) { file in
                     Text(file.lastPathComponent)
@@ -154,5 +115,47 @@ struct AudioPlayerView: View {
         
     }
     
+    private var playbackControls: some View {
+        VStack {
+            Text(audioPlayer.isPlaying ? "▶️ Wiedergabe läuft…" : "⏸️ Gestoppt")
+                .font(.title)
+            Button(action: {
+                if audioPlayer.isPlaying {
+                    audioPlayer.stopPlayback()
+                } else {
+                    let file = FileManager.default
+                        .urls(for: .documentDirectory, in: .userDomainMask)[0]
+                        .appendingPathComponent("aufnahme.m4a")
+                    audioPlayer.startPlayback(url: file)
+                }
+            }) {
+                Label(audioPlayer.isPlaying ? "Stoppen" : "Abspielen", systemImage: audioPlayer.isPlaying ? "stop.fill" : "play.fill")
+                    .frame(width: 200)
+            }
+            .padding()
+            .buttonStyle(.borderedProminent)
+            .tint(audioPlayer.isPlaying ? .red : .blue)
+        }
+    }
+
+    private var volumeControl: some View {
+        VStack(alignment: .leading) {
+            Text("Lautstärke: \(Int(volume * 100)) %")
+            Slider(value: $volume, in: 0.0...1.0)
+                .onChange(of: volume) {
+                    audioPlayer.setPlayerVolume(Float(volume))
+                }
+        }
+        .padding(.horizontal)
+    }
+
+    private var sortButton: some View {
+        Button(action: {
+            audioPlayer.toggleSortOrder()
+        }) {
+            Label("Sortieren", systemImage: "arrow.up.arrow.down")
+        }
+        .buttonStyle(.bordered)
+    }
 
 }
