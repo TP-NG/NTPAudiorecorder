@@ -12,10 +12,24 @@ class AudioPlayerManager: NSObject, ObservableObject {
     
     @Published var recordings: [URL] = []
     
+    var isAscending: Bool = true  // steuert die Sortierreihenfolge
+
+     func sortRecordings() {
+         recordings = recordings
+             .filter { $0.pathExtension == "m4a" }
+             .sorted {
+                 isAscending
+                     ? $0.lastPathComponent < $1.lastPathComponent
+                     : $0.lastPathComponent > $1.lastPathComponent
+             }
+     }
+
+     func toggleSortOrder() {
+         isAscending.toggle()
+         sortRecordings()
+     }
+    
     func startPlayback(url: URL) {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-        try? session.setActive(true)
         
         do {
             player = try AVAudioPlayer(contentsOf: url)
@@ -44,6 +58,25 @@ class AudioPlayerManager: NSObject, ObservableObject {
         }
     }
     
+    func sortedListSavedRecordings() -> [URL] {
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey])
+            let audioFiles = files.filter { $0.pathExtension == "m4a" }
+            
+            let sortedFiles = try audioFiles.sorted {
+                let date1 = try $0.resourceValues(forKeys: [.creationDateKey]).creationDate ?? Date.distantPast
+                let date2 = try $1.resourceValues(forKeys: [.creationDateKey]).creationDate ?? Date.distantPast
+                return date1 > date2  // Neueste zuerst
+            }
+            
+            return sortedFiles
+        } catch {
+            print("Fehler beim Lesen oder Sortieren des Verzeichnisses: \(error)")
+            return []
+        }
+    }
+    
     func setPlayerVolume(_ value: Float) {
         player?.volume = value
     }
@@ -52,7 +85,13 @@ class AudioPlayerManager: NSObject, ObservableObject {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         do {
             let files = try FileManager.default.contentsOfDirectory(at: documents, includingPropertiesForKeys: nil)
-            recordings = files.filter { $0.pathExtension == "m4a" }
+            let audioFiles = files.filter { $0.pathExtension == "m4a" }
+            recordings = try audioFiles.sorted {
+                let date1 = try $0.resourceValues(forKeys: [.creationDateKey]).creationDate ?? Date.distantPast
+                let date2 = try $1.resourceValues(forKeys: [.creationDateKey]).creationDate ?? Date.distantPast
+                return date1 > date2  // Neueste zuerst
+            }
+            
         } catch {
             print("Fehler beim Laden der Aufnahmen: \(error)")
             recordings = []

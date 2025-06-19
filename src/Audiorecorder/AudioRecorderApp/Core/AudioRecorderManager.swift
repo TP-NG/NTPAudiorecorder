@@ -11,7 +11,8 @@ import AVFoundation
 class AudioRecorderManager: NSObject, ObservableObject {
     private var recorder: AVAudioRecorder?
     @Published var isRecording = false
-
+    @Published var audioURL = ""
+    
     func startRecording() {
         let session = AVAudioSession.sharedInstance()
         do {
@@ -26,7 +27,9 @@ class AudioRecorderManager: NSObject, ObservableObject {
                 .urls(for: .documentDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent(filename)
             
-            print("Aufnahmepfad: \(url.path)")
+            audioURL = url.path
+            
+            print("Aufnahmepfad: \(audioURL)")
             
             let settings: [String: Any] = [
                 AVFormatIDKey: Int(kAudioFormatMPEG4AAC),

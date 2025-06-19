@@ -7,6 +7,15 @@ extension URL: Identifiable {
     public var id: String { self.path }
 }
 
+enum SortOrder {
+    case ascending
+    case descending
+
+    mutating func toggle() {
+        self = (self == .ascending) ? .descending : .ascending
+    }
+}
+
 import SwiftUI
 
 struct AudioPlayerView: View {
@@ -17,6 +26,7 @@ struct AudioPlayerView: View {
     @State private var fileToDelete: URL?
     @State private var renamingURL: URL?
     @State private var newFilename: String = ""
+
 
     var body: some View {
         VStack(spacing: 30) {
@@ -62,13 +72,9 @@ struct AudioPlayerView: View {
                 }
             }
             */
-            Button("🔄 Aktualisieren") {
-                audioPlayer.refreshRecordings()
-                audioPlayer.recordings = audioPlayer.recordings
-                    .filter { $0.pathExtension == "m4a" }
-                    .sorted { $0.lastPathComponent > $1.lastPathComponent }
+            Button("🔄 Sortieren") {
+                audioPlayer.toggleSortOrder()
             }
-            
             List {
                 ForEach(audioPlayer.recordings, id: \.self) { file in
                     Text(file.lastPathComponent)
@@ -90,6 +96,7 @@ struct AudioPlayerView: View {
                         }
                 }
             }
+            
         }
         .padding()
         .onAppear {
@@ -143,5 +150,9 @@ struct AudioPlayerView: View {
             }
             .padding()
         }
+        
+        
     }
+    
+
 }
