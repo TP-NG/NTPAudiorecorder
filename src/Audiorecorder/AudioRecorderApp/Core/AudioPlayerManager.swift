@@ -5,15 +5,100 @@
 
 import Foundation
 import AVFoundation
+import Combine
 
 class AudioPlayerManager: NSObject, ObservableObject {
     private var player: AVAudioPlayer?
+    
+    private var progressTimer: AnyCancellable?
+    
+    // In AudioPlayerManager class
+    private var resumePosition: TimeInterval = 0
+
     @Published var isPlaying = false
     
     @Published var recordings: [URL] = []
     
     var isAscending: Bool = true  // steuert die Sortierreihenfolge
+   
+    @Published var playbackProgress: Double = 0
+    @Published var currentTimeString: String = "00:00"
+    @Published var durationString: String = "00:00"
+    @Published var nowPlayingURL: URL?
+    
+    override init() {
+        super.init()
+        refreshRecordings()
+    }
+    
+    // MARK: - Playback Controls
+        
+    func startPlayback(url: URL) {
+        // If resuming same file
+        if nowPlayingURL == url, player != nil {
+            player?.currentTime = resumePosition
+            player?.play()
+            isPlaying = true
+            setupProgressUpdates()
+            return
+        }
+        
+        // New file or no existing player
+        stopPlayback()
+        
+        do {
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.delegate = self
+            player?.volume = 1.0
+            player?.currentTime = resumePosition
+            player?.play()
+            
+            isPlaying = true
+            nowPlayingURL = url
+            setupProgressUpdates()
+        } catch {
+            print("Playback error: \(error)")
+        }
+    }
 
+    func stopPlayback() {
+        resumePosition = 0
+        player?.stop()
+        player = nil
+        isPlaying = false
+        nowPlayingURL = nil
+        playbackProgress = 0
+        currentTimeString = "00:00"
+        durationString = "00:00"
+        progressTimer?.cancel()
+    }
+    
+    func pausePlayback() {
+        guard let player = player else { return }
+        resumePosition = player.currentTime
+        player.pause()
+        isPlaying = false
+        progressTimer?.cancel()
+    }
+    
+    func skipForward() {
+           guard let player = player else { return }
+           player.currentTime = min(player.duration, player.currentTime + 15)
+           updateProgressDisplay()
+       }
+       
+       func skipBackward() {
+           guard let player = player else { return }
+           player.currentTime = max(0, player.currentTime - 15)
+           updateProgressDisplay()
+       }
+       
+    
+    
+    func setPlayerVolume(_ value: Float) {
+        player?.volume = value
+    }
+    
      func sortRecordings() {
          recordings = recordings
              .filter { $0.pathExtension == "m4a" }
@@ -29,23 +114,46 @@ class AudioPlayerManager: NSObject, ObservableObject {
          sortRecordings()
      }
     
-    func startPlayback(url: URL) {
-        
-        do {
-            player = try AVAudioPlayer(contentsOf: url)
-            player?.delegate = self
-            player?.play()
-            isPlaying = true
-        } catch {
-            print("Fehler bei der Wiedergabe: \(error)")
-        }
-    }
+    // MARK: - Private Helpers
     
-    func stopPlayback() {
-        player?.stop()
-        player = nil
-        isPlaying = false
-    }
+    private func creationDate(for url: URL) -> Date {
+            do {
+                let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                return attributes[.creationDate] as? Date ?? Date.distantPast
+            } catch {
+                return Date.distantPast
+            }
+        }
+        
+        private func setupProgressUpdates() {
+            progressTimer?.cancel()
+            progressTimer = Timer.publish(every: 0.25, on: .main, in: .common)
+                .autoconnect()
+                .sink { [weak self] _ in
+                    self?.updateProgressDisplay()
+                }
+        }
+        
+        private func updateProgressDisplay() {
+            guard let player = player else { return }
+            
+            playbackProgress = player.duration > 0 ? player.currentTime / player.duration : 0
+            currentTimeString = formatTime(player.currentTime)
+            durationString = formatTime(player.duration)
+        }
+        
+        private func formatTime(_ time: TimeInterval) -> String {
+            guard time.isFinite else { return "00:00" }
+            let totalSeconds = Int(time)
+            let minutes = totalSeconds / 60
+            let seconds = totalSeconds % 60
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
+    
+    
+    
+    // MARK: - File Management
+        
     
     func listSavedRecordings() -> [URL] {
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -77,9 +185,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
         }
     }
     
-    func setPlayerVolume(_ value: Float) {
-        player?.volume = value
-    }
    
     func refreshRecordings() {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
