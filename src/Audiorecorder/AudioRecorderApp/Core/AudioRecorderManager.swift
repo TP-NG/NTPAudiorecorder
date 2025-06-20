@@ -2,12 +2,11 @@
 //  AudioRecorderManager.swift
 //  Audiorecorder
 //
-//  Created by Administrator on 16.06.25.
-//
 
 import Foundation
 import AVFoundation
 
+import Accelerate // For FFT calculations
 class AudioRecorderManager: NSObject, ObservableObject {
     private var recorder: AVAudioRecorder?
     @Published var isRecording = false
