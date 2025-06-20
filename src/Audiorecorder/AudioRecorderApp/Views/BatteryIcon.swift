@@ -13,25 +13,25 @@ struct BatteryIcon: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 2)
-                .stroke(lineWidth: 1)
-                .frame(width: 24, height: 12)
+            RoundedRectangle(cornerRadius: 3)
+                .stroke(lineWidth: 1.5)
+                .frame(width: 28, height: 14)
             
             HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: 1)
                     .fill(batteryColor)
-                    .frame(width: 20 * CGFloat(level), height: 10)
+                    .frame(width: 24 * CGFloat(level), height: 10)
                 
                 Spacer(minLength: 0)
             }
-            .padding(1)
+            .padding(2)
             
-            // Battery tip
+            // Batterie-Tipp
             Rectangle()
-                .frame(width: 2, height: 4)
-                .offset(x: 13)
+                .frame(width: 3, height: 6)
+                .offset(x: 15.5)
             
-            // Charging icon
+            // Ladesymbol
             if isCharging {
                 Image(systemName: "bolt.fill")
                     .resizable()
@@ -40,7 +40,7 @@ struct BatteryIcon: View {
                     .foregroundColor(.green)
             }
         }
-        .frame(width: 24, height: 12)
+        .frame(width: 28, height: 14)
     }
     
     private var batteryColor: Color {
